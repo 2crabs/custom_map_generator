@@ -6,20 +6,17 @@ use image::{GenericImageView, Rgba};
 
 fn main() {
     
-    for color in get_num_colors([255,255,255,255]){
-        println!("{:?}", color);
-    }
-    
-
     //reduce colors
     reduce("color.png", get_common_colors());
+    //need to get working for materials to works
+    //reduce("mat.png")
     //end  reduction
+    //hashmap<mat_color, Vec>
 
     let color = image::open("color.png").unwrap();
     let mat = image::open("mat.png").unwrap();
     
     let mut vox = create_vox::VoxFile::new(128, 128, 1);
-    let mut cur_palette_index = 0;
     //hashmap<(color_mat, color), index>
     //hashmap<color_mat, index>
     //iterate through all pixls in image
@@ -38,7 +35,7 @@ fn main() {
     mat_index.insert([0,0,128,255], 153);
     mat_index.insert([128,128,0,255], 169);
     mat_index.insert([0,128,128,255], 177);
-
+    //need to find out if color is in the most common colors for that specific material
     for pixel in color.pixels(){
         let mat_pixel = mat.get_pixel(pixel.0, pixel.1);
         if used_colors.contains_key(&(mat_pixel, pixel.2)) {
@@ -50,6 +47,7 @@ fn main() {
                     used_colors.insert((mat_pixel, pixel.2), *a);
                     vox.set_palette_color(*a as u8, pixel.2.0[0], pixel.2.0[1], pixel.2.0[2], pixel.2.0[3]);
                     *a += 1;
+                    vox.models[0].add_voxel_at_pos(pixel.0 as u8, pixel.1 as u8, 0, *a as u8).unwrap();
                 }
 
                 
@@ -142,6 +140,7 @@ fn get_common_colors() -> Vec<color_reduction::image::Rgb<u8>>{
 }
 
 //returns sorted (according to how many) number of each color pixel for a cetain color in the matetrial image
+// -> vec<color, amount>
 fn get_num_colors(material_color: [u8;4]) -> Vec<([u8;4], i32)>{
     let materials = image::open("mat.png").unwrap();
     let color_img = image::open("color.png").unwrap();
