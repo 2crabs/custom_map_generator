@@ -145,23 +145,29 @@ fn get_num_colors(material_color: [u8;4]) -> Vec<([u8;4], i32)>{
     let materials = image::open("mat.png").unwrap();
     let color_img = image::open("in_color.png").unwrap();
     let mut color_count: Vec<([u8;4], i32)> = vec![];
-    for pixel in materials.pixels() {
-        // checks if material of pixel is glass
-        if pixel.2.0 == material_color {
-            //might need to minus 1
-            let mut contained = false;
-            for i in 0..color_count.len() {
-                // executes when color count already contains color
-                if are_similar(color_count[i].0,color_img.get_pixel(pixel.0, pixel.1).0){
-                    color_count[i].1 += 1;
-                    contained = true
+    let mut detail = 120;
+    while (color_count.len() < 16 && (detail>20)){
+        for pixel in materials.pixels() {
+            // checks if material of pixel is glass
+            if pixel.2.0 == material_color {
+                //might need to minus 1
+                let mut contained = false;
+                for i in 0..color_count.len() {
+                    // executes when color count already contains color
+                    if are_similar(color_count[i].0,color_img.get_pixel(pixel.0, pixel.1).0, detail){
+                        color_count[i].1 += 1;
+                        contained = true
+                    }
+                }
+                if !contained {
+                    color_count.push((color_img.get_pixel(pixel.0, pixel.1).0,1))
                 }
             }
-            if !contained {
-                color_count.push((color_img.get_pixel(pixel.0, pixel.1).0,1))
-            }
         }
+        detail -= 10
     }
+    // if more colors can be added do another iteration
+    
     color_count.sort_by(|a, b| b.1.cmp(&a.1));
     return color_count;
 }
@@ -172,10 +178,11 @@ fn convert_to_rgb(colors_in: Vec<([u8;4], i32)>) -> Vec<color_reduction::image::
     }
     return new_colors
 }
-fn are_similar(color1: [u8;4], color2: [u8;4]) -> bool{
+fn are_similar(color1: [u8;4], color2: [u8;4], sensitivity: i32) -> bool{
     (
         color1[0].abs_diff(color2[0]) +
         color1[1].abs_diff(color2[1]) +
         color1[2].abs_diff(color2[2])
-    ) < 60
+    ) < sensitivity as u8
+    //higher = to less colors in final image
 }
