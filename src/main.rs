@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use color_reduction::reduce_colors;
 use create_vox::Color;
 use image::{GenericImageView, Rgba};
@@ -13,30 +15,45 @@ fn main() {
     reduce("color.png", get_common_colors());
     //end  reduction
 
-    let img = image::open("color.png").unwrap();
+    let color = image::open("color.png").unwrap();
+    let mat = image::open("mat.png").unwrap();
     
     let mut vox = create_vox::VoxFile::new(128, 128, 1);
     let mut cur_palette_index = 0;
-
+    //hashmap<(color_mat, color), index>
+    //hashmap<color_mat, index>
     //iterate through all pixls in image
-    for pixel in img.pixels(){
-        //add color to palette if not already there
-        let rgba = pixel.2;
-        let color = Color::new(rgba.0[0], rgba.0[1], rgba.0[2], rgba.0[3]);
-        let mut is_in_palette = false;
-        //iterate through each palette index
-        for index in 1..255{
-            if color == vox.palette[index-1] {
-                is_in_palette = true;
-                vox.models[0].add_voxel_at_pos(pixel.0 as u8, pixel.1 as u8, 0, index as u8).unwrap();
-                break;
+    let mut used_colors: HashMap<(Rgba<u8>, Rgba<u8>), i32> = HashMap::new();
+    let mut mat_index: HashMap<[u8;4], i32> = HashMap::new();
+    mat_index.insert([255,255,255,255], 1);
+    mat_index.insert([0,255,0,255], 9);
+    mat_index.insert([255,0,0,255], 25);
+    mat_index.insert([128,128,128,255], 41);
+    mat_index.insert([255,255,0,255], 57);
+    mat_index.insert([255,0,255,255], 73);
+    mat_index.insert([0,255,255,255], 89);
+    mat_index.insert([0,0,255,255], 105);
+    mat_index.insert([128,0,0,255], 121);
+    mat_index.insert([0,128,0,255], 137);
+    mat_index.insert([0,0,128,255], 153);
+    mat_index.insert([128,128,0,255], 169);
+    mat_index.insert([0,128,128,255], 177);
+
+    for pixel in color.pixels(){
+        let mat_pixel = mat.get_pixel(pixel.0, pixel.1);
+        if used_colors.contains_key(&(mat_pixel, pixel.2)) {
+            vox.models[0].add_voxel_at_pos(pixel.0 as u8, pixel.1 as u8, 0, used_colors[&(mat_pixel, pixel.2)] as u8).unwrap();
+        } else{
+            if mat_index.contains_key(&mat_pixel.0){
+                
+                if let Some(a) = mat_index.get_mut(&mat_pixel.0){
+                    used_colors.insert((mat_pixel, pixel.2), *a);
+                    vox.set_palette_color(*a as u8, pixel.2.0[0], pixel.2.0[1], pixel.2.0[2], pixel.2.0[3]);
+                    *a += 1;
+                }
+
+                
             }
-        }
-        //add color to palette
-        if !is_in_palette{
-            vox.palette[cur_palette_index] = color;
-            cur_palette_index += 1;
-            vox.models[0].add_voxel_at_pos(pixel.0 as u8, pixel.1 as u8, 0, cur_palette_index as u8).unwrap();
         }
     }
     vox.save("result.vox")
@@ -101,23 +118,23 @@ fn get_common_colors() -> Vec<color_reduction::image::Rgb<u8>>{
     plaster_colors.truncate(16);
     colors.append(& mut convert_to_rgb(plaster_colors));
 
-    let mut weak_metal_colors = get_num_colors([255,255,255,255]);
+    let mut weak_metal_colors = get_num_colors([128,0,0,255]);
     weak_metal_colors.truncate(16);
     colors.append(& mut convert_to_rgb(weak_metal_colors));
 
-    let mut heavy_metal_colors = get_num_colors([255,255,255,255]);
+    let mut heavy_metal_colors = get_num_colors([0,128,0,255]);
     heavy_metal_colors.truncate(16);
     colors.append(& mut convert_to_rgb(heavy_metal_colors));
 
-    let mut plastic_colors = get_num_colors([255,255,255,255]);
+    let mut plastic_colors = get_num_colors([0,0,128,255]);
     plastic_colors.truncate(16);
     colors.append(& mut convert_to_rgb(plastic_colors));
 
-    let mut hard_metal_colors = get_num_colors([255,255,255,255]);
+    let mut hard_metal_colors = get_num_colors([128,128,0,255]);
     hard_metal_colors.truncate(8);
     colors.append(& mut convert_to_rgb(hard_metal_colors));
 
-    let mut hard_masonry_colors = get_num_colors([255,255,255,255]);
+    let mut hard_masonry_colors = get_num_colors([0,128,128,255]);
     hard_masonry_colors.truncate(8);
     colors.append(& mut convert_to_rgb(hard_masonry_colors));
 
