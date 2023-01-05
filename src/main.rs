@@ -7,7 +7,7 @@ use image::{GenericImageView, Rgba};
 fn main() {
     
     //reduce colors
-    reduce("color.png", get_common_colors());
+    reduce("in_color.png", get_common_colors());
     //need to get working for materials to works
     //reduce("mat.png")
     //end  reduction
@@ -62,7 +62,7 @@ fn reduce(file: &str, colors: Vec<color_reduction::image::Rgb<u8>>){
     let image = color_reduction::image::open(file)
     .expect("error loading image");
     let new_image = reduce_colors(image, colors.as_slice());
-    new_image.save(file).expect("error saving image");
+    new_image.save("color.png").expect("error saving image");
 }
 
 fn get_common_colors() -> Vec<color_reduction::image::Rgb<u8>>{
@@ -143,7 +143,7 @@ fn get_common_colors() -> Vec<color_reduction::image::Rgb<u8>>{
 // -> vec<color, amount>
 fn get_num_colors(material_color: [u8;4]) -> Vec<([u8;4], i32)>{
     let materials = image::open("mat.png").unwrap();
-    let color_img = image::open("color.png").unwrap();
+    let color_img = image::open("in_color.png").unwrap();
     let mut color_count: Vec<([u8;4], i32)> = vec![];
     for pixel in materials.pixels() {
         // checks if material of pixel is glass
@@ -152,7 +152,7 @@ fn get_num_colors(material_color: [u8;4]) -> Vec<([u8;4], i32)>{
             let mut contained = false;
             for i in 0..color_count.len() {
                 // executes when color count already contains color
-                if color_count[i].0 == color_img.get_pixel(pixel.0, pixel.1).0{
+                if are_similar(color_count[i].0,color_img.get_pixel(pixel.0, pixel.1).0){
                     color_count[i].1 += 1;
                     contained = true
                 }
@@ -171,4 +171,11 @@ fn convert_to_rgb(colors_in: Vec<([u8;4], i32)>) -> Vec<color_reduction::image::
         new_colors.push(color_reduction::image::Rgb::from([i.0[0],i.0[1],i.0[2]]))
     }
     return new_colors
+}
+fn are_similar(color1: [u8;4], color2: [u8;4]) -> bool{
+    (
+        color1[0].abs_diff(color2[0]) +
+        color1[1].abs_diff(color2[1]) +
+        color1[2].abs_diff(color2[2])
+    ) < 60
 }
